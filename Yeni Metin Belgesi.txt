@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>NoruHane | Mini Oyun Portalı</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface-hover: #334155;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --fire: #f97316;
+      --water: #38bdf8;
+      --snake: #22c55e;
+      --accent: #8b5cf6;
+      --border: #334155;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    header {
+      background: rgba(30, 41, 59, 0.85);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .logo {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .logo span {
+      background: linear-gradient(135deg, var(--fire), var(--accent), var(--water));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .btn {
+      background: var(--surface-hover);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn:hover { filter: brightness(1.15); }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: var(--accent); border-color: var(--accent); }
+    .btn-fire { background: var(--fire); border-color: var(--fire); }
+    .btn-water { background: var(--water); border-color: var(--water); color: #0f172a; }
+    .btn-snake { background: var(--snake); border-color: var(--snake); color: #0f172a; }
+
+    .container {
+      max-width: 960px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 24px 16px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .hidden { display: none !important; }
+
+    /* ANA SAYFA */
+    .hero {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .hero h1 {
+      font-size: 2rem;
+      margin-bottom: 8px;
+    }
+
+    .hero p {
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    .games-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+      gap: 20px;
+    }
+
+    .game-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .game-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--accent);
+    }
+
+    .card-badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 99px;
+      margin-bottom: 12px;
+      width: fit-content;
+    }
+
+    .badge-multi { background: rgba(249, 115, 22, 0.2); color: #fdba74; }
+    .badge-solo { background: rgba(34, 197, 94, 0.2); color: #86efac; }
+    .badge-soon { background: rgba(148, 163, 184, 0.2); color: #cbd5e1; }
+
+    .game-card h2 { font-size: 1.3rem; margin-bottom: 8px; }
+    .game-card p { color: var(--muted); font-size: 0.9rem; line-height: 1.5; margin-bottom: 20px; }
+
+    /* OYUN ALANI ORTAK */
+    .game-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 14px;
+      background: var(--surface);
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+
+    .canvas-wrap {
+      position: relative;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      background: #090d16;
+      border-radius: 14px;
+      border: 2px solid var(--border);
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    canvas {
+      display: block;
+      max-width: 100%;
+      height: auto;
+    }
+
+    /* ATEŞ VE SU LOBİ */
+    .lobby-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      max-width: 480px;
+      margin: 20px auto;
+      text-align: center;
+    }
+
+    .lobby-box h2 { margin-bottom: 10px; }
+    .lobby-box p { color: var(--muted); font-size: 0.9rem; margin-bottom: 20px; }
+
+    .room-code-display {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: 6px;
+      background: var(--bg);
+      padding: 12px 20px;
+      border-radius: 12px;
+      border: 1px dashed var(--accent);
+      margin: 14px 0;
+      color: #c4b5fd;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 12px;
+    }
+
+    input[type="text"] {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 1.1rem;
+      width: 140px;
+      text-align: center;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+
+    .divider {
+      margin: 20px 0;
+      border-top: 1px solid var(--border);
+      position: relative;
+    }
+
+    .divider span {
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--surface);
+      padding: 0 10px;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    /* MOBİL DOKUNMATİK KONTROLLER */
+    .mobile-controls {
+      margin-top: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      touch-action: none;
+    }
+
+    .dpad {
+      display: grid;
+      grid-template-columns: repeat(3, 56px);
+      grid-template-rows: repeat(2, 56px);
+      gap: 6px;
+    }
+
+    .touch-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 12px;
+      font-size: 1.3rem;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      touch-action: none;
+    }
+
+    .touch-btn:active { background: var(--accent); }
+
+    .fw-controls {
+      display: flex;
+      width: 100%;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .fw-pad-group {
+      display: flex;
+      gap: 8px;
+    }
+
+    .fw-btn {
+      width: 60px;
+      height: 58px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 1.3rem;
+      font-weight: 800;
+      touch-action: none;
+    }
+
+    .fw-btn:active { opacity: 0.7; transform: scale(0.95); }
+
+    .status-pill {
+      font-size: 0.8rem;
+      padding: 4px 10px;
+      border-radius: 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo" onclick="goHome()">🎮 <span>NoruHane</span></div>
+    <button id="homeBtn" class="btn hidden" onclick="goHome()">← Ana Sayfa</button>
+  </header>
+
+  <div class="container">
+
+    <!-- 1. ANA SAYFA -->
+    <section id="view-home">
+      <div class="hero">
+        <h1>NoruHane Oyun Portalı</h1>
+        <p>İster tek başına rekor kır, ister oda koduyla arkadaşını davet edip beraber oyna.</p>
+      </div>
+
+      <div class="games-grid">
+        <div class="game-card">
+          <div>
+            <span class="card-badge badge-multi">2 Kişilik • Oda Kodu / Ortak Ekran</span>
+            <h2>🔥 Ateş ve Su 💧</h2>
+            <p>Engelleri aş, elmasları topla ve iki karakteri de kendi kapısına ulaştır. Arkadaşına oda kodu göndererek telefondan veya bilgisayardan beraber oyna!</p>
+          </div>
+          <button class="btn btn-fire" onclick="openGame('firewater')">Oyuna Gir</button>
+        </div>
+
+        <div class="game-card">
+          <div>
+            <span class="card-badge badge-solo">Tek Kişilik • Mobil & PC</span>
+            <h2>🐍 Klasik Yılan</h2>
+            <p>Elmaları topla, kuyruğunu büyüt ve duvarlara çarpmadan en yüksek skoru yap. Telefonda parmak kaydırma veya tuşlarla oynanır.</p>
+          </div>
+          <button class="btn btn-snake" onclick="openGame('snake')">Hemen Oyna</button>
+        </div>
+
+        <div class="game-card" style="opacity: 0.75;">
+          <div>
+            <span class="card-badge badge-soon">Yakında Eklenecek</span>
+            <h2>🕵️ Codenames</h2>
+            <p>Takım kaptanının tek kelimelik ipuçlarıyla gizli ajanları bulmaya çalıştığı kelime ve strateji oyunu.</p>
+          </div>
+          <button class="btn" disabled>Hazırlanıyor</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. YILAN OYUNU -->
+    <section id="view-snake" class="hidden">
+      <div class="game-header">
+        <div>
+          <strong>🐍 Klasik Yılan</strong>
+          <span class="status-pill" style="margin-left:8px;">Skor: <b id="snake-score">0</b></span>
+          <span class="status-pill">Rekor: <b id="snake-best">0</b></span>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <select id="snake-speed" class="btn" onchange="resetSnake()">
+            <option value="130">Yavaş</option>
+            <option value="95" selected>Normal</option>
+            <option value="65">Hızlı</option>
+          </select>
+          <button class="btn btn-snake" onclick="resetSnake()">Yeniden Başlat</button>
+        </div>
+      </div>
+
+      <div class="canvas-wrap" id="snake-touch-area">
+        <canvas id="snakeCanvas" width="480" height="480"></canvas>
+      </div>
+
+      <div class="mobile-controls" style="justify-content: center;">
+        <div class="dpad">
+          <div></div>
+          <button class="touch-btn" onclick="setSnakeDir(0, -1)">▲</button>
+          <div></div>
+          <button class="touch-btn" onclick="setSnakeDir(-1, 0)">◀</button>
+          <button class="touch-btn" onclick="setSnakeDir(0, 1)">▼</button>
+          <button class="touch-btn" onclick="setSnakeDir(1, 0)">▶</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. ATEŞ VE SU -->
+    <section id="view-firewater" class="hidden">
+      <!-- Lobi Ekranı -->
+      <div id="fw-lobby" class="lobby-box">
+        <h2>🔥 Ateş ve Su 💧</h2>
+        <p>Arkadaşınla farklı cihazlardan oynamak için oda kur veya kod gir. İstersen tek cihazda da oynayabilirsin.</p>
+
+        <button class="btn btn-fire" style="width:100%; padding:12px; font-size:1rem;" onclick="createFWRoom()">
+          + Yeni Oda Kur (Ateş Ol)
+        </button>
+
+        <div id="created-room-info" class="hidden" style="margin-top:16px;">
+          <div style="font-size:0.85rem; color:var(--muted);">Arkadaşına bu 4 haneli oda kodunu ver:</div>
+          <div class="room-code-display" id="my-room-code">----</div>
+          <div style="font-size:0.85rem; color:#86efac; margin-bottom:10px;" id="room-wait-text">Arkadaşın bekleniyor... (İstersen beklemeden de başlayabilirsin)</div>
+          <button class="btn btn-primary" onclick="startFWGame('online-fire')">Oyunu Başlat</button>
+        </div>
+
+        <div class="divider"><span>VEYA ODAYA KATIL (SU OL)</span></div>
+
+        <div class="input-row">
+          <input type="text" id="join-code-input" maxlength="4" placeholder="KOD" />
+          <button class="btn btn-water" onclick="joinFWRoom()">Katıl</button>
+        </div>
+
+        <div class="divider"><span>TEK CİHAZDA OYNA</span></div>
+        <button class="btn" style="width:100%;" onclick="startFWGame('local')">Aynı Ekranda 2 Kişilik Oyna</button>
+      </div>
+
+      <!-- Oyun Alanı -->
+      <div id="fw-game-area" class="hidden">
+        <div class="game-header">
+          <div>
+            <strong>🔥 Ateş & Su 💧</strong>
+            <span class="status-pill" id="fw-mode-badge">Mod: Tek Cihaz</span>
+            <span class="status-pill">Bölüm: <b id="fw-level-num">1</b>/2</span>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn" onclick="resetFWLevel()">Bölümü Sıfırla</button>
+            <button class="btn" onclick="backToFWLobby()">Lobi</button>
+          </div>
+        </div>
+
+        <div class="canvas-wrap">
+          <canvas id="fwCanvas" width="720" height="420"></canvas>
+        </div>
+
+        <!-- Mobil / Dokunmatik Butonlar -->
+        <div class="mobile-controls" id="fw-touch-controls">
+          <!-- Sol Taraf: Ateş veya Aktif Oyuncu Yön -->
+          <div class="fw-controls">
+            <div class="fw-pad-group" id="pad-fire">
+              <button class="fw-btn" style="border-color:var(--fire);" ontouchstart="setTouchKey('fireLeft', true)" ontouchend="setTouchKey('fireLeft', false)" onmousedown="setTouchKey('fireLeft', true)" onmouseup="setTouchKey('fireLeft', false)">◀</button>
+              <button class="fw-btn" style="border-color:var(--fire);" ontouchstart="setTouchKey('fireRight', true)" ontouchend="setTouchKey('fireRight', false)" onmousedown="setTouchKey('fireRight', true)" onmouseup="setTouchKey('fireRight', false)">▶</button>
+              <button class="fw-btn" style="border-color:var(--fire);" ontouchstart="setTouchKey('fireUp', true)" ontouchend="setTouchKey('fireUp', false)" onmousedown="setTouchKey('fireUp', true)" onmouseup="setTouchKey('fireUp', false)">▲ 🔥</button>
+            </div>
+
+            <div class="fw-pad-group" id="pad-water">
+              <button class="fw-btn" style="border-color:var(--water);" ontouchstart="setTouchKey('waterLeft', true)" ontouchend="setTouchKey('waterLeft', false)" onmousedown="setTouchKey('waterLeft', true)" onmouseup="setTouchKey('waterLeft', false)">◀</button>
+              <button class="fw-btn" style="border-color:var(--water);" ontouchstart="setTouchKey('waterRight', true)" ontouchend="setTouchKey('waterRight', false)" onmousedown="setTouchKey('waterRight', true)" onmouseup="setTouchKey('waterRight', false)">▶</button>
+              <button class="fw-btn" style="border-color:var(--water);" ontouchstart="setTouchKey('waterUp', true)" ontouchend="setTouchKey('waterUp', false)" onmousedown="setTouchKey('waterUp', true)" onmouseup="setTouchKey('waterUp', false)">▲ 💧</button>
+            </div>
+          </div>
+        </div>
+        <p style="text-align:center; color:var(--muted); font-size:0.82rem; margin-top:8px;">
+          PC Kontrolleri: <b>Ateş</b> için W-A-D • <b>Su</b> için Yön Tuşları (▲ ◀ ▶)
+        </p>
+      </div>
+    </section>
+
+  </div>
+
+  <script>
+    /* =========================================
+       1. SAYFA GEÇİŞLERİ
+    ========================================= */
+    let activeGame = null;
+
+    function goHome() {
+      activeGame = null;
+      document.getElementById('view-home').classList.remove('hidden');
+      document.getElementById('view-snake').classList.add('hidden');
+      document.getElementById('view-firewater').classList.add('hidden');
+      document.getElementById('homeBtn').classList.add('hidden');
+      stopSync();
+    }
+
+    function openGame(game) {
+      activeGame = game;
+      document.getElementById('view-home').classList.add('hidden');
+      document.getElementById('homeBtn').classList.remove('hidden');
+
+      if (game === 'snake') {
+        document.getElementById('view-snake').classList.remove('hidden');
+        resetSnake();
+      } else if (game === 'firewater') {
+        document.getElementById('view-firewater').classList.remove('hidden');
+        backToFWLobby();
+      }
+    }
+
+    /* =========================================
+       2. YILAN OYUNU (SNAKE)
+    ========================================= */
+    const sCanvas = document.getElementById('snakeCanvas');
+    const sCtx = sCanvas.getContext('2d');
+    const gridSize = 24;
+    const tileCount = sCanvas.width / gridSize;
+
+    let snake = [];
+    let food = { x: 10, y: 10 };
+    let dx = 1, dy = 0;
+    let nextDx = 1, nextDy = 0;
+    let snakeScore = 0;
+    let snakeBest = localStorage.getItem('noruhane_snake_best') || 0;
+    let snakeTimer = null;
+    let snakeGameOver = false;
+
+    document.getElementById('snake-best').textContent = snakeBest;
+
+    function resetSnake() {
+      snake = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
+      dx = 1; dy = 0;
+      nextDx = 1; nextDy = 0;
+      snakeScore = 0;
+      snakeGameOver = false;
+      document.getElementById('snake-score').textContent = snakeScore;
+      spawnFood();
+      if (snakeTimer) clearInterval(snakeTimer);
+      const speed = parseInt(document.getElementById('snake-speed').value);
+      snakeTimer = setInterval(updateSnake, speed);
+    }
+
+    function spawnFood() {
+      food = {
+        x: Math.floor(Math.random() * tileCount),
+        y: Math.floor(Math.random() * tileCount)
+      };
+      if (snake.some(s => s.x === food.x && s.y === food.y)) spawnFood();
+    }
+
+    function setSnakeDir(nx, ny) {
+      if (nx === -dx && ny === -dy) return;
+      nextDx = nx;
+      nextDy = ny;
+    }
+
+    function updateSnake() {
+      if (activeGame !== 'snake' || snakeGameOver) return;
+      dx = nextDx;
+      dy = nextDy;
+
+      const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+
+      if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount ||
+          snake.some(s => s.x === head.x && s.y === head.y)) {
+        snakeGameOver = true;
+        drawSnake();
+        return;
+      }
+
+      snake.unshift(head);
+
+      if (head.x === food.x && head.y === food.y) {
+        snakeScore += 10;
+        document.getElementById('snake-score').textContent = snakeScore;
+        if (snakeScore > snakeBest) {
+          snakeBest = snakeScore;
+          localStorage.setItem('noruhane_snake_best', snakeBest);
+          document.getElementById('snake-best').textContent = snakeBest;
+        }
+        spawnFood();
+      } else {
+        snake.pop();
+      }
+
+      drawSnake();
+    }
+
+    function drawSnake() {
+      sCtx.fillStyle = '#090d16';
+      sCtx.fillRect(0, 0, sCanvas.width, sCanvas.height);
+
+      // Izgara
+      sCtx.strokeStyle = 'rgba(255,255,255,0.03)';
+      for (let i = 0; i < tileCount; i++) {
+        sCtx.beginPath();
+        sCtx.moveTo(i * gridSize, 0);
+        sCtx.lineTo(i * gridSize, sCanvas.height);
+        sCtx.stroke();
+        sCtx.beginPath();
+        sCtx.moveTo(0, i * gridSize);
+        sCtx.lineTo(sCanvas.width, i * gridSize);
+        sCtx.stroke();
+      }
+
+      // Elma
+      sCtx.fillStyle = '#ef4444';
+      sCtx.beginPath();
+      sCtx.arc(food.x * gridSize + gridSize / 2, food.y * gridSize + gridSize / 2, gridSize / 2.3, 0, Math.PI * 2);
+      sCtx.fill();
+
+      // Yılan
+      snake.forEach((part, idx) => {
+        sCtx.fillStyle = idx === 0 ? '#4ade80' : '#22c55e';
+        sCtx.fillRect(part.x * gridSize + 1, part.y * gridSize + 1, gridSize - 2, gridSize - 2);
+      });
+
+      if (snakeGameOver) {
+        sCtx.fillStyle = 'rgba(15, 23, 42, 0.8)';
+        sCtx.fillRect(0, 0, sCanvas.width, sCanvas.height);
+        sCtx.fillStyle = '#fff';
+        sCtx.font = 'bold 28px sans-serif';
+        sCtx.textAlign = 'center';
+        sCtx.fillText('Oyun Bitti!', sCanvas.width / 2, sCanvas.height / 2 - 10);
+        sCtx.font = '16px sans-serif';
+        sCtx.fillStyle = '#94a3b8';
+        sCtx.fillText('Skorun: ' + snakeScore + ' • Tekrar oynamak için Yeniden Başlat', sCanvas.width / 2, sCanvas.height / 2 + 22);
+      }
+    }
+
+    // Telefonda parmakla kaydırma (Swipe)
+    let touchStartX = 0, touchStartY = 0;
+    const snakeArea = document.getElementById('snake-touch-area');
+    snakeArea.addEventListener('touchstart', e => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    snakeArea.addEventListener('touchend', e => {
+      const diffX = e.changedTouches[0].clientX - touchStartX;
+      const diffY = e.changedTouches[0].clientY - touchStartY;
+      if (Math.abs(diffX) > Math.abs(diffY)) {
+        if (diffX > 20) setSnakeDir(1, 0);
+        else if (diffX < -20) setSnakeDir(-1, 0);
+      } else {
+        if (diffY > 20) setSnakeDir(0, 1);
+        else if (diffY < -20) setSnakeDir(0, -1);
+      }
+    }, { passive: true });
+
+    /* =========================================
+       3. ATEŞ VE SU + CANLI ODA SİSTEMİ
+    ========================================= */
+    const fwCanvas = document.getElementById('fwCanvas');
+    const fwCtx = fwCanvas.getContext('2d');
+
+    let fwMode = 'local'; // 'local', 'online-fire', 'online-water'
+    let roomCode = '';
+    let syncInterval = null;
+    let currentLevelIdx = 0;
+    let fwAnimId = null;
+
+    const keys = {};
+    const touchKeys = {};
+
+    window.addEventListener('keydown', e => {
+      keys[e.code] = true;
+      if (activeGame === 'snake') {
+        if (e.code === 'ArrowUp' || e.code === 'KeyW') setSnakeDir(0, -1);
+        if (e.code === 'ArrowDown' || e.code === 'KeyS') setSnakeDir(0, 1);
+        if (e.code === 'ArrowLeft' || e.code === 'KeyA') setSnakeDir(-1, 0);
+        if (e.code === 'ArrowRight' || e.code === 'KeyD') setSnakeDir(1, 0);
+      }
+    });
+    window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+    function setTouchKey(k, val) { touchKeys[k] = val; }
+
+    function createFWRoom() {
+      roomCode = Math.floor(1000 + Math.random() * 9000).toString();
+      document.getElementById('my-room-code').textContent = roomCode;
+      document.getElementById('created-room-info').classList.remove('hidden');
+    }
+
+    function joinFWRoom() {
+      const val = document.getElementById('join-code-input').value.trim();
+      if (val.length !== 4) {
+        alert('Lütfen 4 haneli oda kodunu girin.');
+        return;
+      }
+      roomCode = val;
+      startFWGame('online-water');
+    }
+
+    function backToFWLobby() {
+      stopSync();
+      if (fwAnimId) cancelAnimationFrame(fwAnimId);
+      document.getElementById('fw-lobby').classList.remove('hidden');
+      document.getElementById('fw-game-area').classList.add('hidden');
+    }
+
+    function startFWGame(mode) {
+      fwMode = mode;
+      document.getElementById('fw-lobby').classList.add('hidden');
+      document.getElementById('fw-game-area').classList.remove('hidden');
+
+      const badge = document.getElementById('fw-mode-badge');
+      const padFire = document.getElementById('pad-fire');
+      const padWater = document.getElementById('pad-water');
+
+      if (mode === 'local') {
+        badge.textContent = 'Mod: Aynı Ekran (2 Kişi)';
+        padFire.classList.remove('hidden');
+        padWater.classList.remove('hidden');
+      } else if (mode === 'online-fire') {
+        badge.textContent = 'Oda: ' + roomCode + ' (Sen: 🔥 Ateş)';
+        padFire.classList.remove('hidden');
+        padWater.classList.add('hidden');
+        startOnlineSync();
+      } else if (mode === 'online-water') {
+        badge.textContent = 'Oda: ' + roomCode + ' (Sen: 💧 Su)';
+        padFire.classList.add('hidden');
+        padWater.classList.remove('hidden');
+        startOnlineSync();
+      }
+
+      currentLevelIdx = 0;
+      loadFWLevel(0);
+      fwLoop();
+    }
+
+    // Ücretsiz bulut senkronizasyonu (ntfy.sh üzerinden gerçek zamanlı mesajlaşma)
+    let eventSource = null;
+    let lastSendTime = 0;
+
+    function startOnlineSync() {
+      stopSync();
+      const topic = 'noruhane_fw_room_' + roomCode;
+      eventSource = new EventSource('https://ntfy.sh/' + topic + '/sse');
+      eventSource.onmessage = (event) => {
+        try {
+          const parsed = JSON.parse(event.data);
+          if (!parsed.message) return;
+          const payload = JSON.parse(parsed.message);
+          if (fwMode === 'online-fire' && payload.role === 'water') {
+            water.x = payload.x;
+            water.y = payload.y;
+          } else if (fwMode === 'online-water' && payload.role === 'fire') {
+            fire.x = payload.x;
+            fire.y = payload.y;
+            if (payload.lvl !== currentLevelIdx) loadFWLevel(payload.lvl);
+          }
+        } catch (err) {}
+      };
+    }
+
+    function broadcastPosition() {
+      if (fwMode === 'local') return;
+      const now = Date.now();
+      if (now - lastSendTime < 90) return;
+      lastSendTime = now;
+
+      const topic = 'noruhane_fw_room_' + roomCode;
+      const data = fwMode === 'online-fire'
+        ? { role: 'fire', x: Math.round(fire.x), y: Math.round(fire.y), lvl: currentLevelIdx }
+        : { role: 'water', x: Math.round(water.x), y: Math.round(water.y) };
+
+      fetch('https://ntfy.sh/' + topic, {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }).catch(() => {});
+    }
+
+    function stopSync() {
+      if (eventSource) {
+        eventSource.close();
+        eventSource = null;
+      }
+    }
+
+    // Bölümler
+    const levels = [
+      {
+        fireStart: { x: 50, y: 330 },
+        waterStart: { x: 95, y: 330 },
+        platforms: [
+          { x: 0, y: 380, w: 720, h: 40 },
+          { x: 180, y: 300, w: 180, h: 20 },
+          { x: 420, y: 230, w: 200, h: 20 },
+          { x: 120, y: 160, w: 220, h: 20 },
+          { x: 400, y: 100, w: 280, h: 20 }
+        ],
+        hazards: [
+          { x: 240, y: 374, w: 90, h: 8, type: 'fire' },
+          { x: 450, y: 374, w: 90, h: 8, type: 'water' },
+          { x: 230, y: 294, w: 70, h: 8, type: 'acid' }
+        ],
+        gems: [
+          { x: 270, y: 345, type: 'fire', collected: false },
+          { x: 480, y: 345, type: 'water', collected: false },
+          { x: 210, y: 125, type: 'fire', collected: false },
+          { x: 500, y: 195, type: 'water', collected: false }
+        ],
+        doors: {
+          fire: { x: 560, y: 48, w: 34, h: 52 },
+          water: { x: 615, y: 48, w: 34, h: 52 }
+        }
+      },
+      {
+        fireStart: { x: 40, y: 330 },
+        waterStart: { x: 640, y: 330 },
+        platforms: [
+          { x: 0, y: 380, w: 720, h: 40 },
+          { x: 80, y: 290, w: 160, h: 20 },
+          { x: 480, y: 290, w: 160, h: 20 },
+          { x: 260, y: 210, w: 200, h: 20 },
+          { x: 60, y: 130, w: 180, h: 20 },
+          { x: 480, y: 130, w: 180, h: 20 }
+        ],
+        hazards: [
+          { x: 200, y: 374, w: 130, h: 8, type: 'water' },
+          { x: 390, y: 374, w: 130, h: 8, type: 'fire' },
+          { x: 320, y: 204, w: 80, h: 8, type: 'acid' }
+        ],
+        gems: [
+          { x: 140, y: 255, type: 'water', collected: false },
+          { x: 550, y: 255, type: 'fire', collected: false },
+          { x: 130, y: 95, type: 'fire', collected: false },
+          { x: 550, y: 95, type: 'water', collected: false }
+        ],
+        doors: {
+          fire: { x: 90, y: 78, w: 34, h: 52 },
+          water: { x: 590, y: 78, w: 34, h: 52 }
+        }
+      }
+    ];
+
+    let levelData = null;
+    let fire = { x: 0, y: 0, w: 24, h: 34, vx: 0, vy: 0, grounded: false };
+    let water = { x: 0, y: 0, w: 24, h: 34, vx: 0, vy: 0, grounded: false };
+
+    function loadFWLevel(idx) {
+      currentLevelIdx = idx;
+      document.getElementById('fw-level-num').textContent = idx + 1;
+      levelData = JSON.parse(JSON.stringify(levels[idx]));
+      fire = { x: levelData.fireStart.x, y: levelData.fireStart.y, w: 24, h: 34, vx: 0, vy: 0, grounded: false };
+      water = { x: levelData.waterStart.x, y: levelData.waterStart.y, w: 24, h: 34, vx: 0, vy: 0, grounded: false };
+    }
+
+    function resetFWLevel() {
+      loadFWLevel(currentLevelIdx);
+    }
+
+    function rectsOverlap(a, b) {
+      return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+    }
+
+    function updatePlayer(p, left, right, up) {
+      if (left) p.vx = -3.6;
+      else if (right) p.vx = 3.6;
+      else p.vx = 0;
+
+      if (up && p.grounded) {
+        p.vy = -10.2;
+        p.grounded = false;
+      }
+
+      p.vy += 0.48; // Yerçekimi
+      p.x += p.vx;
+
+      if (p.x < 0) p.x = 0;
+      if (p.x + p.w > fwCanvas.width) p.x = fwCanvas.width - p.w;
+
+      p.y += p.vy;
+      p.grounded = false;
+
+      for (const plat of levelData.platforms) {
+        if (rectsOverlap(p, plat)) {
+          if (p.vy > 0 && p.y + p.h - p.vy <= plat.y + 8) {
+            p.y = plat.y - p.h;
+            p.vy = 0;
+            p.grounded = true;
+          } else if (p.vy < 0 && p.y - p.vy >= plat.y + plat.h - 8) {
+            p.y = plat.y + plat.h;
+            p.vy = 0;
+          }
+        }
+      }
+    }
+
+    function fwLoop() {
+      if (activeGame !== 'firewater') return;
+
+      const fLeft = keys['KeyA'] || touchKeys['fireLeft'];
+      const fRight = keys['KeyD'] || touchKeys['fireRight'];
+      const fUp = keys['KeyW'] || touchKeys['fireUp'];
+
+      const wLeft = keys['ArrowLeft'] || touchKeys['waterLeft'];
+      const wRight = keys['ArrowRight'] || touchKeys['waterRight'];
+      const wUp = keys['ArrowUp'] || touchKeys['waterUp'];
+
+      if (fwMode === 'local') {
+        updatePlayer(fire, fLeft, fRight, fUp);
+        updatePlayer(water, wLeft, wRight, wUp);
+      } else if (fwMode === 'online-fire') {
+        updatePlayer(fire, fLeft, fRight, fUp);
+        broadcastPosition();
+      } else if (fwMode === 'online-water') {
+        updatePlayer(water, wLeft, wRight, wUp);
+        broadcastPosition();
+      }
+
+      // Tehlikeler
+      for (const h of levelData.hazards) {
+        if (rectsOverlap(fire, h) && (h.type === 'water' || h.type === 'acid')) {
+          resetFWLevel();
+        }
+        if (rectsOverlap(water, h) && (h.type === 'fire' || h.type === 'acid')) {
+          resetFWLevel();
+        }
+      }
+
+      // Elmaslar
+      for (const g of levelData.gems) {
+        if (g.collected) continue;
+        const box = { x: g.x - 8, y: g.y - 8, w: 16, h: 16 };
+        if (g.type === 'fire' && rectsOverlap(fire, box)) g.collected = true;
+        if (g.type === 'water' && rectsOverlap(water, box)) g.collected = true;
+      }
+
+      // Kapılar (Bölüm Sonu)
+      if (rectsOverlap(fire, levelData.doors.fire) && rectsOverlap(water, levelData.doors.water)) {
+        if (currentLevelIdx + 1 < levels.length) {
+          loadFWLevel(currentLevelIdx + 1);
+        } else {
+          alert('Tebrikler! Tüm bölümleri tamamladınız!');
+          loadFWLevel(0);
+        }
+      }
+
+      drawFW();
+      fwAnimId = requestAnimationFrame(fwLoop);
+    }
+
+    function drawFW() {
+      fwCtx.fillStyle = '#0f172a';
+      fwCtx.fillRect(0, 0, fwCanvas.width, fwCanvas.height);
+
+      // Platformlar
+      fwCtx.fillStyle = '#334155';
+      for (const plat of levelData.platforms) {
+        fwCtx.fillRect(plat.x, plat.y, plat.w, plat.h);
+        fwCtx.fillStyle = '#475569';
+        fwCtx.fillRect(plat.x, plat.y, plat.w, 4);
+        fwCtx.fillStyle = '#334155';
+      }
+
+      // Havuzlar
+      for (const h of levelData.hazards) {
+        fwCtx.fillStyle = h.type === 'fire' ? '#f97316' : h.type === 'water' ? '#38bdf8' : '#22c55e';
+        fwCtx.fillRect(h.x, h.y, h.w, h.h);
+      }
+
+      // Kapılar
+      fwCtx.fillStyle = 'rgba(249, 115, 22, 0.35)';
+      fwCtx.fillRect(levelData.doors.fire.x, levelData.doors.fire.y, levelData.doors.fire.w, levelData.doors.fire.h);
+      fwCtx.strokeStyle = '#f97316';
+      fwCtx.strokeRect(levelData.doors.fire.x, levelData.doors.fire.y, levelData.doors.fire.w, levelData.doors.fire.h);
+
+      fwCtx.fillStyle = 'rgba(56, 189, 248, 0.35)';
+      fwCtx.fillRect(levelData.doors.water.x, levelData.doors.water.y, levelData.doors.water.w, levelData.doors.water.h);
+      fwCtx.strokeStyle = '#38bdf8';
+      fwCtx.strokeRect(levelData.doors.water.x, levelData.doors.water.y, levelData.doors.water.w, levelData.doors.water.h);
+
+      // Elmaslar
+      for (const g of levelData.gems) {
+        if (g.collected) continue;
+        fwCtx.fillStyle = g.type === 'fire' ? '#fb923c' : '#7dd3fc';
+        fwCtx.beginPath();
+        fwCtx.moveTo(g.x, g.y - 9);
+        fwCtx.lineTo(g.x + 8, g.y);
+        fwCtx.lineTo(g.x, g.y + 9);
+        fwCtx.lineTo(g.x - 8, g.y);
+        fwCtx.closePath();
+        fwCtx.fill();
+      }
+
+      // Ateş Karakteri
+      fwCtx.fillStyle = '#f97316';
+      fwCtx.fillRect(fire.x, fire.y, fire.w, fire.h);
+      fwCtx.fillStyle = '#fff';
+      fwCtx.fillRect(fire.x + 5, fire.y + 8, 4, 4);
+      fwCtx.fillRect(fire.x + 15, fire.y + 8, 4, 4);
+
+      // Su Karakteri
+      fwCtx.fillStyle = '#38bdf8';
+      fwCtx.fillRect(water.x, water.y, water.w, water.h);
+      fwCtx.fillStyle = '#fff';
+      fwCtx.fillRect(water.x + 5, water.y + 8, 4, 4);
+      fwCtx.fillRect(water.x + 15, water.y + 8, 4, 4);
+    }
+  </script>
+</body>
+</html>
