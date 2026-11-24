@@ -202,7 +202,7 @@
       width: 100%;
       display: flex;
       justify-content: center;
-      background: #090d16;
+      background: #090e1a;
       border-radius: 14px;
       border: 2px solid var(--border);
       overflow: hidden;
@@ -426,7 +426,7 @@
         <div class="game-card">
           <div>
             <div class="card-top">
-              <span class="card-badge badge-multi">2 Kişilik • PeerJS Oda &amp; Link</span>
+              <span class="card-badge badge-multi">2 Cihaz • PeerJS Oda &amp; Link</span>
               <span class="element-pair">
                 <svg width="18" height="18"><use href="#svg-fire"></use></svg>
                 <svg width="18" height="18"><use href="#svg-water"></use></svg>
@@ -512,7 +512,7 @@
         </button>
 
         <div id="created-room-info" class="hidden" style="margin-top:16px;">
-          <div style="font-size:0.85rem; color:var(--muted);">Arkadaşına bu 4 haneli oda kodunu ver veya linki gönder:</div>
+          <div style="font-size:0.85rem; color:var(--muted);">Oda Kodu &amp; Davet Linki:</div>
           <div class="room-code-display" id="my-room-code">----</div>
           <div class="invite-row">
             <button type="button" class="btn btn-water" onclick="copyInviteLink()">🔗 Davet Linkini Kopyala</button>
@@ -708,7 +708,6 @@
       sCtx.fillStyle = '#090e1a';
       sCtx.fillRect(0, 0, sCanvas.width, sCanvas.height);
 
-      // Izgara
       sCtx.strokeStyle = 'rgba(255,255,255,0.03)';
       for (let i = 0; i < tileCount; i++) {
         sCtx.beginPath();
@@ -721,13 +720,11 @@
         sCtx.stroke();
       }
 
-      // Elma
       sCtx.fillStyle = '#ef4444';
       sCtx.beginPath();
       sCtx.arc(food.x * gridSize + gridSize / 2, food.y * gridSize + gridSize / 2, gridSize / 2.3, 0, Math.PI * 2);
       sCtx.fill();
 
-      // Yılan
       snake.forEach((part, idx) => {
         sCtx.fillStyle = idx === 0 ? '#4ade80' : '#22a06b';
         sCtx.fillRect(part.x * gridSize + 1, part.y * gridSize + 1, gridSize - 2, gridSize - 2);
@@ -746,7 +743,6 @@
       }
     }
 
-    // Telefonda parmakla kaydırma (Swipe)
     let touchStartX = 0, touchStartY = 0;
     const snakeArea = document.getElementById('snake-touch-area');
     snakeArea.addEventListener('touchstart', e => {
@@ -781,6 +777,8 @@
     let peerConn = null;
     let lastSendTime = 0;
     let remoteTarget = null;
+    let sendSeq = 0;
+    let lastReceivedSeq = 0;
 
     const keys = {};
     const touchKeys = {};
@@ -860,6 +858,8 @@
     function startFWGame(mode) {
       fwMode = mode;
       remoteTarget = null;
+      sendSeq = 0;
+      lastReceivedSeq = 0;
       document.getElementById('fw-lobby').classList.add('hidden');
       document.getElementById('fw-game-area').classList.remove('hidden');
 
@@ -895,6 +895,8 @@
 
     function attachDataHandlers(conn) {
       peerConn = conn;
+      lastReceivedSeq = 0;
+
       peerConn.on('open', () => {
         setPeerStatus('Bağlandı');
         const waitEl = document.getElementById('room-wait-text');
@@ -904,6 +906,10 @@
       peerConn.on('data', (payload) => {
         if (!payload || typeof payload !== 'object') return;
         if (payload.type === 'state') {
+          if (typeof payload.seq === 'number') {
+            if (payload.seq <= lastReceivedSeq) return;
+            lastReceivedSeq = payload.seq;
+          }
           if (fwMode === 'online-fire' && payload.role === 'water') {
             remoteTarget = { role: 'water', x: payload.x, y: payload.y };
           } else if (fwMode === 'online-water' && payload.role === 'fire') {
@@ -954,7 +960,7 @@
       peer = new Peer();
 
       peer.on('open', () => {
-        const conn = peer.connect('noruhane-fw-' + code, { reliable: true });
+        const conn = peer.connect('noruhane-fw-' + code, { reliable: false });
         attachDataHandlers(conn);
       });
 
@@ -966,12 +972,13 @@
     function broadcastState(force = false) {
       if (fwMode === 'local' || !peerConn || !peerConn.open) return;
       const now = performance.now();
-      if (!force && now - lastSendTime < 45) return;
+      if (!force && now - lastSendTime < 60) return;
       lastSendTime = now;
+      sendSeq += 1;
 
       const msg = fwMode === 'online-fire'
-        ? { type: 'state', role: 'fire', x: fire.x, y: fire.y, lvl: currentLevelIdx }
-        : { type: 'state', role: 'water', x: water.x, y: water.y };
+        ? { type: 'state', role: 'fire', seq: sendSeq, x: fire.x, y: fire.y, lvl: currentLevelIdx }
+        : { type: 'state', role: 'water', seq: sendSeq, x: water.x, y: water.y };
 
       try { peerConn.send(msg); } catch {}
     }
@@ -1076,7 +1083,7 @@
         p.grounded = false;
       }
 
-      p.vy += 0.48; // Yerçekimi
+      p.vy += 0.48;
       p.x += p.vx;
 
       if (p.x < 0) p.x = 0;
@@ -1101,9 +1108,13 @@
 
     function applyRemoteSmoothing() {
       if (!remoteTarget) return;
-      const targetObj = remoteTarget.role === 'fire' ? fire : water;
-      targetObj.x += (remoteTarget.x - targetObj.x) * 0.35;
-      targetObj.y += (remoteTarget.y - targetObj.y) * 0.35;
+      if (fwMode === 'online-fire' && remoteTarget.role === 'water') {
+        water.x += (remoteTarget.x - water.x) * 0.45;
+        water.y += (remoteTarget.y - water.y) * 0.45;
+      } else if (fwMode === 'online-water' && remoteTarget.role === 'fire') {
+        fire.x += (remoteTarget.x - fire.x) * 0.45;
+        fire.y += (remoteTarget.y - fire.y) * 0.45;
+      }
     }
 
     function fwLoop() {
@@ -1130,7 +1141,6 @@
         broadcastState();
       }
 
-      // Tehlikeler
       for (const h of levelData.hazards) {
         if (rectsOverlap(fire, h) && (h.type === 'water' || h.type === 'acid')) {
           resetFWLevel();
@@ -1140,7 +1150,6 @@
         }
       }
 
-      // Elmaslar
       for (const g of levelData.gems) {
         if (g.collected) continue;
         const box = { x: g.x - 8, y: g.y - 8, w: 16, h: 16 };
@@ -1148,7 +1157,6 @@
         if (g.type === 'water' && rectsOverlap(water, box)) g.collected = true;
       }
 
-      // Kapılar (Bölüm Sonu)
       if (rectsOverlap(fire, levelData.doors.fire) && rectsOverlap(water, levelData.doors.water)) {
         const nextIdx = currentLevelIdx + 1 < levels.length ? currentLevelIdx + 1 : 0;
         if (nextIdx === 0) {
@@ -1168,7 +1176,6 @@
       fwCtx.fillStyle = '#0c1220';
       fwCtx.fillRect(0, 0, fwCanvas.width, fwCanvas.height);
 
-      // Platformlar
       fwCtx.fillStyle = '#2d3d5e';
       for (const plat of levelData.platforms) {
         fwCtx.fillRect(plat.x, plat.y, plat.w, plat.h);
@@ -1177,13 +1184,11 @@
         fwCtx.fillStyle = '#2d3d5e';
       }
 
-      // Havuzlar
       for (const h of levelData.hazards) {
         fwCtx.fillStyle = h.type === 'fire' ? '#e05a2b' : h.type === 'water' ? '#2b8cbe' : '#22a06b';
         fwCtx.fillRect(h.x, h.y, h.w, h.h);
       }
 
-      // Kapılar
       fwCtx.fillStyle = 'rgba(224, 90, 43, 0.32)';
       fwCtx.fillRect(levelData.doors.fire.x, levelData.doors.fire.y, levelData.doors.fire.w, levelData.doors.fire.h);
       fwCtx.strokeStyle = '#e05a2b';
@@ -1194,7 +1199,6 @@
       fwCtx.strokeStyle = '#2b8cbe';
       fwCtx.strokeRect(levelData.doors.water.x, levelData.doors.water.y, levelData.doors.water.w, levelData.doors.water.h);
 
-      // Elmaslar
       for (const g of levelData.gems) {
         if (g.collected) continue;
         fwCtx.fillStyle = g.type === 'fire' ? '#e8764e' : '#58a8d4';
