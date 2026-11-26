@@ -50,10 +50,11 @@
   /* ---------- Fizik (kare adımı sabit 60 Hz) ---------- */
   const solid = (L, cx, cy) => cx < 0 || cx >= CO || cy < 0 || cy >= RO || L.rows[cy][cx] === '#';
   function hit(L, p, axisX) {
+    const dn = p.vy > 0, rt = p.vx > 0; // yön, çarpışma çözülmeden ÖNCE okunmalı
     const x0 = Math.floor(p.x / T), x1 = Math.floor((p.x + PW - .01) / T), y0 = Math.floor(p.y / T), y1 = Math.floor((p.y + PH - .01) / T);
     for (let cy = y0; cy <= y1; cy++) for (let cx = x0; cx <= x1; cx++) if (solid(L, cx, cy)) {
-      if (axisX) p.x = p.vx > 0 ? cx * T - PW : (cx + 1) * T;
-      else if (p.vy > 0) { p.y = cy * T - PH; p.vy = 0; p.g = true; }
+      if (axisX) p.x = rt ? cx * T - PW : (cx + 1) * T;
+      else if (dn) { p.y = cy * T - PH; p.vy = 0; p.g = true; }
       else { p.y = (cy + 1) * T; p.vy = 0; }
     }
   }
