@@ -12,9 +12,9 @@
           <button class="btn pri" id="rs">Yeniden başla</button>
         </div>
         <div class="board" id="bd"><canvas id="cv" width="${N * C}" height="${N * C}"></canvas></div>
-        <div class="pads one"><div class="grp">
-          <button class="pb g" data-d="-1,0">◀</button><button class="pb g" data-d="0,-1">▲</button>
-          <button class="pb g" data-d="0,1">▼</button><button class="pb g" data-d="1,0">▶</button></div></div>`;
+        <div class="pads one">
+          <div class="grp mv"><button class="pb g" data-d="-1,0">◀</button><button class="pb g" data-d="1,0">▶</button></div>
+          <div class="grp mv"><button class="pb g" data-d="0,-1">▲</button><button class="pb g" data-d="0,1">▼</button></div></div>`;
       const $ = s => root.querySelector(s), cv = $('#cv'), x = cv.getContext('2d');
       let s, dir, q, food, gold, score, over, started, every = 6, c = 0, best = 0;
 

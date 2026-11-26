@@ -33,7 +33,7 @@ input{background:var(--bg);border:1px solid var(--ln);border-radius:10px;color:v
 .board canvas{width:100%;height:100%;object-fit:contain;display:block}
 .ov{position:absolute;inset:0;display:grid;place-content:center;text-align:center;background:#0e1424d0;font-size:1.3rem;border-radius:14px}
 .pads{display:none;justify-content:space-between;gap:10px;padding:8px 2px 4px}
-.pads.one{justify-content:center}
+.pads.one{justify-content:space-between;padding:8px 14px}.pads.ctr{justify-content:center}.grp.mv{gap:28px}.one .pb{width:78px;height:68px;border-radius:20px}
 @media(hover:none){.pads{display:flex}}
 .grp{display:flex;gap:8px}
 .pb{width:64px;height:56px;border-radius:16px;border:2px solid var(--ln);background:var(--s);color:var(--tx);font-size:1.3rem;touch-action:none}
@@ -46,3 +46,4 @@ input{background:var(--bg);border:1px solid var(--ln);border-radius:10px;color:v
 .note{color:var(--mu);font-size:.85rem;margin:6px 0}
 #toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translate(-50%,30px);background:var(--tx);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:700;opacity:0;pointer-events:none;transition:.2s;max-width:90vw;text-align:center}
 #toast.on{opacity:1;transform:translate(-50%,0)}
+@media(hover:none) and (orientation:landscape){.pads{position:fixed;left:0;right:0;bottom:calc(6px + env(safe-area-inset-bottom));padding:0 calc(18px + env(safe-area-inset-right)) 0 calc(18px + env(safe-area-inset-left));pointer-events:none}.pads .pb{pointer-events:auto;opacity:.72}}

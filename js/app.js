@@ -36,7 +36,7 @@
     if (cur && /^(Arrow|Space)/.test(e.code)) e.preventDefault();
   });
   addEventListener('keyup', e => NH.keys[e.code] = 0);
-  const clear = () => { NH.keys = {}; NH.touch = {}; };
+  const clear = () => { for (const o of [NH.keys, NH.touch]) for (const k in o) delete o[k]; };
   addEventListener('blur', clear);
   document.addEventListener('visibilitychange', clear);
   NH.pad = (el, k) => {
@@ -51,10 +51,11 @@
     const d = document, e = d.documentElement;
     const req = e.requestFullscreen || e.webkitRequestFullscreen;
     if (!req || /iPhone|iPod/.test(navigator.userAgent))
-      return NH.toast('iPhone\'da tam ekran için: Paylaş → Ana Ekrana Ekle');
+      return NH.toast('iPhone Safari tam ekranı desteklemiyor. Paylaş → Ana Ekrana Ekle ile ekle, sonra ana ekrandaki simgeden aç.');
     if (d.fullscreenElement || d.webkitFullscreenElement) (d.exitFullscreen || d.webkitExitFullscreen).call(d);
     else {
-      Promise.resolve(req.call(e)).then(() => { if (cur === 'atesvesu') screen.orientation?.lock?.('landscape').catch(() => {}); }).catch(() => {});
+      Promise.resolve(req.call(e)).then(() => { if (cur === 'atesvesu') screen.orientation?.lock?.('landscape').catch(() => {}); })
+        .catch(err => NH.toast('Tam ekran açılamadı: ' + (err && err.message || err)));
     }
   };
 
@@ -85,6 +86,7 @@
     </article>`).join('');
   $('#grid').onclick = e => { const b = e.target.closest('[data-id]'); if (b) open(b.dataset.id); };
   $('#fsBtn').onclick = NH.fs;
+  if (navigator.standalone || matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches) $('#fsBtn').hidden = true; // zaten uygulama modunda
   $('#homeBtn').onclick = () => history.state && history.state.g ? history.back() : (close(), history.replaceState({}, '', location.pathname));
   $('#logo').onclick = () => { if (cur) $('#homeBtn').onclick(); };
   addEventListener('popstate', close);

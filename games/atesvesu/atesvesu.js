@@ -2,42 +2,46 @@
   const NH = window.NoruHane, T = 30, CO = 24, RO = 14, PW = 20, PH = 28;
   const PEER = 'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js';
 
-  /* ---------- Bölümler: her zorluk için 5 bölüm, sabit tohumdan üretilir ----------
-     Tüm tehlikeler zıplanabilir genişlikte (1-2 kare) ve iki yanında güvenli zemin var,
-     bu yüzden her bölüm kurala göre çözülebilir. Aynı tohum = iki oyuncuda aynı bölüm. */
+  /* ---------- Bölümler: sabit tohumdan üretilir ve çözülebilirliği tools/seviye-kontrol.js ile kanıtlanır ----------
+     k: platform sayısı, w: genişlik, g: boşluk, up: en fazla yükseliş (kare), hz: tehlike, fl: zemin tehlikesi.
+     Yukarı çıkan platformlar kat kat dizilir, çıkış kapıları en yüksek platformdadır. */
   const TIERS = [
-    { n: 'Kolay', w: [5, 7], g: [1, 2], up: 1, hz: 1, gems: 3 },
-    { n: 'Orta',  w: [5, 6], g: [2, 3], up: 2, hz: 2, gems: 4 },
-    { n: 'Zor',   w: [5, 6], g: [2, 4], up: 2, hz: 3, gems: 5 }
+    { n: 'Kolay', k: 4, w: [5, 7], g: [1, 2], up: 1, hz: 1, fl: 0, gems: 3 },
+    { n: 'Orta',  k: 6, w: [4, 5], g: [2, 3], up: 2, hz: 3, fl: 1, gems: 4 },
+    { n: 'Zor',   k: 8, w: [3, 4], g: [2, 4], up: 3, hz: 4, fl: 2, gems: 5 }
   ];
+  const SEEDS = [[8, 1, 50, 78, 22], [0, 3, 0, 1, 2], [0, 1, 1, 0, 0]];
   const rng = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
 
-  function gen(t, i) {
-    const c = TIERS[t], r = rng(9001 + t * 131 + i * 17), ri = (a, b) => a + Math.floor(r() * (b - a + 1));
+  function gen(t, i, off = SEEDS[t][i]) {
+    const c = TIERS[t], r = rng(9001 + t * 131 + i * 17 + off * 7919), ri = (a, b) => a + Math.floor(r() * (b - a + 1));
     const g = [...Array(RO)].map((_, y) => [...Array(CO)].map((_, x) => y === 0 || y === RO - 1 || x === 0 || x === CO - 1 ? '#' : '.'));
-    const mg = d => d >= 2 ? 2 : d === 1 ? 3 : 4, put = (x, w, f) => { for (let k = 0; k < w; k++) g[f][x + k] = '#'; };
-    const P = []; let p = { x: 1, w: 6, f: 13 };
-    for (;;) {
-      const f = Math.max(6, Math.min(12, p.f - ri(-1, c.up))), gap = Math.min(ri(...c.g), mg(Math.max(0, p.f - f)));
-      const w = ri(...c.w), x = p.x + p.w + gap;
-      if (x + w + 4 > CO - 1) break;
-      p = { x, w, f }; P.push(p); put(x, w, f);
+    const mg = d => d >= 3 ? 2 : d === 2 ? 3 : d === 1 ? 4 : 5, cols = {}, P = [];
+    // aynı sütunda iki platform en az 3 kare arayla durur (kafa boşluğu)
+    const ok = (x, w, f) => { if (x < 1 || x + w > CO - 1) return false; for (let k = x; k < x + w; k++) for (const o of cols[k] || []) if (Math.abs(o - f) < 3) return false; return true; };
+    const add = (x, w, f) => { const q = { x, w, f, hz: 0 }; P.push(q); for (let k = x; k < x + w; k++) { (cols[k] = cols[k] || []).push(f); g[f][k] = '#'; } return q; };
+    let p = add(ri(5, 8), ri(...c.w), 11);
+    for (let n = 1; n < c.k; n++) {
+      let q = null;
+      for (let a = 0; a < 40 && !q; a++) {
+        const w = ri(...c.w), f = Math.max(4, Math.min(11, p.f - ri(-1, c.up))), gap = Math.min(ri(...c.g), mg(Math.max(0, p.f - f)));
+        const left = p.x + p.w > 13 ? r() < .7 : r() < .3, x = left ? p.x - gap - w : p.x + p.w + gap;
+        if (ok(x, w, f)) q = add(x, w, f);
+      }
+      if (!q) break; p = q;
     }
-    const f = Math.max(5, Math.min(12, p.f - ri(0, c.up)));
-    let x = p.x + p.w + Math.min(c.g[0], mg(Math.max(0, p.f - f)));
-    if (CO - 1 - x < 3) x = p.x + p.w + 1;
-    const dw = Math.min(5, CO - 1 - x); put(x, dw, f);
-    g[f - 1][x + dw - 2] = 'f'; g[f - 1][x + dw - 1] = 'w';
-    // tehlikeler: platform başına en fazla bir tane (L lav, P su, G çamur)
-    const cand = P.filter(q => q.w >= 5); let hz = c.hz;
-    while (hz-- > 0 && cand.length) {
-      const q = cand.splice(ri(0, cand.length - 1), 1)[0], hw = ri(1, Math.min(2, q.w - 4)), o = ri(2, q.w - 2 - hw);
+    const D = P.reduce((m, q) => q.f <= m.f ? q : m, P[0]); // kapılar en yüksek platformda
+    g[D.f - 1][D.x + D.w - 2] = 'f'; g[D.f - 1][D.x + D.w - 1] = 'w';
+    for (let h = 0, tr = 0; h < c.hz && tr < 40; tr++) { // L lav, P su, G çamur
+      const q = P[ri(0, P.length - 1)]; if (q === D || q.hz || q.w < 4) continue;
+      const hw = q.w >= 6 ? ri(1, 2) : 1, o = ri(1, q.w - 1 - hw);
       for (let k = 0; k < hw; k++) g[q.f - 1][q.x + o + k] = 'LPG'[ri(0, 2)];
+      q.hz = 1; h++;
     }
-    const all = [{ x: 1, w: 6, f: 13 }, ...P];
-    for (let k = 0; k < c.gems; k++) { const q = all[ri(0, all.length - 1)], cx = q.x + ri(0, q.w - 1); if (g[q.f - 1][cx] === '.') g[q.f - 1][cx] = k % 2 ? 'b' : 'r'; }
+    for (let h = 0; h < c.fl; h++) { const w = ri(2, 4), x = ri(9, 21 - w), ty = 'LPG'[ri(0, 2)]; for (let k = 0; k < w; k++) if (g[12][x + k] === '.') g[12][x + k] = ty; }
+    for (let k = 0; k < c.gems; k++) { const q = P[ri(0, P.length - 1)], cx = q.x + ri(0, q.w - 1); if (g[q.f - 1][cx] === '.') g[q.f - 1][cx] = k % 2 ? 'b' : 'r'; }
     g[12][1] = 'F'; g[12][2] = 'W';
-    const L = { rows: g.map(a => a.join('')), hz: [], gm: [], d: {}, sp: {}, trap: ((P.find(q => q.f <= 10) || { x: 1e9 }).x) * T };
+    const L = { rows: g.map(a => a.join('')), hz: [], gm: [], d: {}, sp: {}, k: P.length, top: D.f, trap: (P[0].x + P[0].w + 2) * T };
     L.rows.forEach((s, y) => [...s].forEach((ch, x) => {
       if ('LPG'.includes(ch)) L.hz.push({ x: x * T + 1, y: y * T + 18, w: T - 2, h: 12, k: ch });
       else if (ch === 'r' || ch === 'b') L.gm.push({ x: x * T + T / 2, y: y * T + T / 2, t: ch, got: 0 });
@@ -66,6 +70,8 @@
     p.y += p.vy; p.g = false; hit(L, p, false);
   }
   const ov = (a, b) => a.x < b.x + b.w && a.x + PW > b.x && a.y < b.y + b.h && a.y + PH > b.y;
+
+  if (typeof module === 'object') module.exports = { gen, move, ov, TIERS };
 
   /* ---------- Oyun ---------- */
   NH.games.atesvesu = {
@@ -152,14 +158,14 @@
       function start(m, ti, ix) {
         mode = m; tier = ti; idx = ix; frames = 0;
         const solo = m === 'local';
+        const pb = (c, k, t) => `<button class="pb ${c}" data-k="${k}">${t}</button>`;
+        const g3 = (c, q) => `<div class="grp">${pb(c, q + 'l', '◀')}${pb(c, q + 'r', '▶')}${pb(c, q + 'u', '▲')}</div>`;
+        const g2 = (c, q) => `<div class="grp mv">${pb(c, q + 'l', '◀')}${pb(c, q + 'r', '▶')}</div><div class="grp">${pb(c, q + 'u', '▲')}</div>`;
         root.innerHTML = `<div class="hud"><b>Ateş ve Su</b><span>${TIERS[tier].n} ${idx + 1}/5</span>
           <span>Elmas <i id="gm"></i></span><span><i id="tm">0:00</i></span><span class="sp"></span>
           <button class="btn" id="rs">Sıfırla</button><button class="btn" id="lb">Lobi</button></div>
           <div class="board"><canvas id="cv" width="${CO * T}" height="${RO * T}"></canvas><div class="ov" id="ov" hidden></div></div>
-          <div class="pads ${solo ? '' : 'one'}">
-            ${solo || m === 'host' ? '<div class="grp"><button class="pb r" data-k="fl">◀</button><button class="pb r" data-k="fr">▶</button><button class="pb r" data-k="fu">▲</button></div>' : ''}
-            ${solo || m === 'guest' ? '<div class="grp"><button class="pb b" data-k="wl">◀</button><button class="pb b" data-k="wr">▶</button><button class="pb b" data-k="wu">▲</button></div>' : ''}
-          </div>`;
+          <div class="pads ${solo ? '' : 'one'}">${solo ? g3('r', 'f') + g3('b', 'w') : m === 'host' ? g2('r', 'f') : g2('b', 'w')}</div>`;
         root.querySelectorAll('[data-k]').forEach(b => NH.pad(b, b.dataset.k));
         $('#rs').onclick = () => { if (m === 'guest') return NH.toast('Sıfırlamayı host yapar'); reload(); send({ t: 'dead' }); };
         $('#lb').onclick = () => { if (m === 'host') send({ t: 'lobby' }); lobby(); };
